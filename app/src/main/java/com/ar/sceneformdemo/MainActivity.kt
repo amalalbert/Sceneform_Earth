@@ -1,7 +1,6 @@
 package com.ar.sceneformdemo
 
 import android.animation.ObjectAnimator
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -27,7 +26,6 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
-import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.function.BiFunction
@@ -58,12 +56,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(com.ar.sceneformdemo.R.layout.activity_ux)
+        setContentView(R.layout.activity_ux)
 //        val b = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
         arFragment =
-            supportFragmentManager.findFragmentById(com.ar.sceneformdemo.R.id.ux_fragment) as ArFragment?
+            supportFragmentManager.findFragmentById(R.id.ux_fragment) as ArFragment?
         val ControlsStage: CompletableFuture<ViewRenderable> =
-            ViewRenderable.builder().setView(this,com.ar.sceneformdemo.R.layout.alert_layout).build()
+            ViewRenderable.builder().setView(this,R.layout.alert_layout).build()
         val Earthstage: CompletableFuture<ModelRenderable> =
             ModelRenderable.builder().setSource(this, Uri.parse("Earth.sfb")).build()
 // Code to insert object probably happens here
@@ -97,51 +95,48 @@ class MainActivity : AppCompatActivity() {
             })
         // When you build a Renderable, Sceneform loads its resources in the background while returning
         // a CompletableFuture. Call thenAccept(), handle(), or check isDone() before calling get().
-        ModelRenderable.builder()
-            .setSource(this, com.ar.sceneformdemo.R.raw.andy)
-            .build()
-            .thenAccept { renderable: ModelRenderable ->
-                andyRenderable = renderable
-            }
-            .exceptionally { throwable: Throwable? ->
-                val toast =
-                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-                toast.setGravity(Gravity.CENTER, 0, 0)
-                toast.show()
-                null
-            }
-//        val anchor: Anchor?
-//        val anchorNode = AnchorNode()
-//        val anchorNode = AnchorNode(anchor)
-//        anchorNode.setParent(arFragment!!.arSceneView.scene)
-//        val sliderControls = TransformableNode(arFragment!!.transformationSystem)
-//        sliderControls.setParent(anchorNode)
-//        sliderControls.renderable = layout_2d
-//        sliderControls.localPosition = Vector3(0.0f, 0.25f, 0.0f)
+//        ModelRenderable.builder()
+//            .setSource(this, R.raw.andy)
+//            .build()
+//            .thenAccept { renderable: ModelRenderable ->
+//                andyRenderable = renderable
+//            }
+//            .exceptionally { throwable: Throwable? ->
+//                val toast =
+//                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
+//                toast.setGravity(Gravity.CENTER, 0, 0)
+//                toast.show()
+//                null
+//            }
         arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
-            if (andyRenderable == null) {
+            if (andyRenderable == null && earth == null) {
                 Log.d("devhell", "onCreate: $andyRenderable")
+                return@setOnTapArPlaneListener
+            }
+            if (!hasFinishedLoading) {
+                // We can't do anything yet.
                 return@setOnTapArPlaneListener
             }
             // Create the Anchor.
             val anchor: Anchor = hitResult.createAnchor()
             val anchorNode = AnchorNode(anchor)
             anchorNode.setParent(arFragment!!.arSceneView.scene)
+
+            //create slider control and add it to the anchor.
             val sliderControls = TransformableNode(arFragment!!.transformationSystem)
             sliderControls.setParent(anchorNode)
             sliderControls.renderable = layout_2d
             sliderControls.localPosition = Vector3(0.0f, 0.35f, 0.0f)
-            sliderControls.select()
+//            sliderControls.select()
 
-//             Create the transformable andy and add it to the anchor.
-            val andy =
-                TransformableNode(arFragment!!.transformationSystem)
+             //Create the transformable andy and add it to the anchor.
+            val andy = TransformableNode(arFragment!!.transformationSystem)
             andy.setParent(anchorNode)
             andy.renderable = earth
             andy.select()
 
-            // Toggle the solar controls on and off by tapping the sun.
-            andy.setOnTapListener { hitTestResult: HitTestResult?, motionEvent: MotionEvent? ->
+            // Toggle the speed controls on and off by tapping the earth.
+            andy.setOnTapListener { _: HitTestResult?, motionEvent: MotionEvent? ->
                 sliderControls.isEnabled = (!sliderControls.isEnabled)
                 if (motionEvent != null) {
                     if(motionEvent.action == MotionEvent.ACTION_DOWN){
