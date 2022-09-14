@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private var hasFinishedLoading = false
     private var arFragment: ArFragment? = null
     private var andyRenderable: ModelRenderable? = null
-    private var layout_2d: ViewRenderable? = null
+    private var speedSlider: ViewRenderable? = null
     private var earth: ModelRenderable? = null
     private val sliderSettings: SliderSettings = SliderSettings()
     private val degreesPerSecond = 90.0f
@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 try {
                     earth = Earthstage.get()
-                    layout_2d = ControlsStage.get()
+                    speedSlider = ControlsStage.get()
                     // Everything finished loading successfully.
                     hasFinishedLoading = true
                 } catch (ex: InterruptedException) {
@@ -125,9 +125,9 @@ class MainActivity : AppCompatActivity() {
             //create slider control and add it to the anchor.
             val sliderControls = TransformableNode(arFragment!!.transformationSystem)
             sliderControls.setParent(anchorNode)
-            sliderControls.renderable = layout_2d
-            sliderControls.localPosition = Vector3(0.0f, 0.35f, 0.0f)
-//            sliderControls.select()
+            sliderControls.renderable = speedSlider
+            sliderControls.localPosition = Vector3(0.0f,.65f, 0.0f)
+            sliderControls.select()
 
              //Create the transformable andy and add it to the anchor.
             val andy = TransformableNode(arFragment!!.transformationSystem)
@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
 //            orbit.setDegreesPerSecond(orbitDegreesPerSecond)
 //            orbit.setParent(andy)
 
-            val solarControlsView: View? = layout_2d?.view
+            val solarControlsView: View? = speedSlider?.view
 
             val rotationSpeedBar = solarControlsView?.findViewById<SeekBar>(R.id.rotationSpeedBar)
             if (rotationSpeedBar != null) {
