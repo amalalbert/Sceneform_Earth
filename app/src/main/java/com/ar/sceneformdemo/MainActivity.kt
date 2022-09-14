@@ -58,16 +58,16 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_ux)
+        setContentView(com.ar.sceneformdemo.R.layout.activity_ux)
 //        val b = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
         arFragment =
-            supportFragmentManager.findFragmentById(R.id.ux_fragment) as ArFragment?
+            supportFragmentManager.findFragmentById(com.ar.sceneformdemo.R.id.ux_fragment) as ArFragment?
         val ControlsStage: CompletableFuture<ViewRenderable> =
-            ViewRenderable.builder().setView(this, R.layout.alert_layout).build()
+            ViewRenderable.builder().setView(this,com.ar.sceneformdemo.R.layout.alert_layout).build()
         val Earthstage: CompletableFuture<ModelRenderable> =
             ModelRenderable.builder().setSource(this, Uri.parse("Earth.sfb")).build()
 // Code to insert object probably happens here
-            CompletableFuture.allOf(ControlsStage,Earthstage).handle { notUsed: Void?, throwable: Throwable? ->
+            CompletableFuture.allOf(ControlsStage,Earthstage).handle(BiFunction<Void, Throwable, Any?> { notUsed: Void?, throwable: Throwable? ->
                 // When you build a Renderable, Sceneform loads its resources in the background while
                 // returning a CompletableFuture. Call handle(), thenAccept(), or check isDone()
                 // before calling get().
@@ -84,32 +84,32 @@ class MainActivity : AppCompatActivity() {
                     hasFinishedLoading = true
                 } catch (ex: InterruptedException) {
                     val toast =
-                        Toast.makeText(this, "Unable to load renderable", Toast.LENGTH_LONG)
+                        Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
                     toast.setGravity(Gravity.CENTER, 0, 0)
                     toast.show()
                 } catch (ex: ExecutionException) {
                     val toast =
-                        Toast.makeText(this, "Unable to load renderable", Toast.LENGTH_LONG)
+                        Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
                     toast.setGravity(Gravity.CENTER, 0, 0)
                     toast.show()
                 }
                 null
-            }
+            })
         // When you build a Renderable, Sceneform loads its resources in the background while returning
         // a CompletableFuture. Call thenAccept(), handle(), or check isDone() before calling get().
-//        ModelRenderable.builder()
-//            .setSource(this, com.ar.sceneformdemo.R.raw.andy)
-//            .build()
-//            .thenAccept { renderable: ModelRenderable ->
-//                andyRenderable = renderable
-//            }
-//            .exceptionally { throwable: Throwable? ->
-//                val toast =
-//                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-//                toast.setGravity(Gravity.CENTER, 0, 0)
-//                toast.show()
-//                null
-//            }
+        ModelRenderable.builder()
+            .setSource(this, com.ar.sceneformdemo.R.raw.andy)
+            .build()
+            .thenAccept { renderable: ModelRenderable ->
+                andyRenderable = renderable
+            }
+            .exceptionally { throwable: Throwable? ->
+                val toast =
+                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
+                toast.setGravity(Gravity.CENTER, 0, 0)
+                toast.show()
+                null
+            }
 //        val anchor: Anchor?
 //        val anchorNode = AnchorNode()
 //        val anchorNode = AnchorNode(anchor)
