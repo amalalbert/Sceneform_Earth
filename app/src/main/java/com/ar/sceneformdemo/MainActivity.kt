@@ -1,7 +1,6 @@
 package com.ar.sceneformdemo
 
 import android.animation.ObjectAnimator
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -27,9 +26,9 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
-import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import com.ar.utilities.Utils
 import java.util.function.BiFunction
 
 
@@ -46,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var hasFinishedLoading = false
     private var arFragment: ArFragment? = null
     private var andyRenderable: ModelRenderable? = null
-    private var layout_2d: ViewRenderable? = null
+    private var speedSlider: ViewRenderable? = null
     private var earth: ModelRenderable? = null
     private val sliderSettings: SliderSettings = SliderSettings()
     private val degreesPerSecond = 90.0f
@@ -58,90 +57,77 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(com.ar.sceneformdemo.R.layout.activity_ux)
-//        val b = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        setContentView(R.layout.activity_ux)
         arFragment =
-            supportFragmentManager.findFragmentById(com.ar.sceneformdemo.R.id.ux_fragment) as ArFragment?
-        val ControlsStage: CompletableFuture<ViewRenderable> =
-            ViewRenderable.builder().setView(this,com.ar.sceneformdemo.R.layout.alert_layout).build()
-        val Earthstage: CompletableFuture<ModelRenderable> =
+            supportFragmentManager.findFragmentById(R.id.ux_fragment) as ArFragment?
+        val controlsStage: CompletableFuture<ViewRenderable> =
+            ViewRenderable.builder().setView(this,R.layout.alert_layout).build()
+        val earthStage: CompletableFuture<ModelRenderable> =
             ModelRenderable.builder().setSource(this, Uri.parse("Earth.sfb")).build()
-// Code to insert object probably happens here
-            CompletableFuture.allOf(ControlsStage,Earthstage).handle(BiFunction<Void, Throwable, Any?> { notUsed: Void?, throwable: Throwable? ->
+
+            CompletableFuture.allOf(controlsStage,earthStage).handle { notUsed: Void?, throwable: Throwable? ->
                 // When you build a Renderable, Sceneform loads its resources in the background while
                 // returning a CompletableFuture. Call handle(), thenAccept(), or check isDone()
                 // before calling get().
                 if (throwable != null) {
-                    val toast =
-                        Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-                    toast.setGravity(Gravity.CENTER, 0, 0)
-                    toast.show()
+                    Utils.printToast("Unable to load renderable",this)
                 }
                 try {
-                    earth = Earthstage.get()
-                    layout_2d = ControlsStage.get()
+                    earth = earthStage.get()
+                    speedSlider = controlsStage.get()
                     // Everything finished loading successfully.
                     hasFinishedLoading = true
                 } catch (ex: InterruptedException) {
-                    val toast =
-                        Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-                    toast.setGravity(Gravity.CENTER, 0, 0)
-                    toast.show()
+                    Utils.printToast("Unable to load renderable",this)
                 } catch (ex: ExecutionException) {
-                    val toast =
-                        Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-                    toast.setGravity(Gravity.CENTER, 0, 0)
-                    toast.show()
+                    Utils.printToast("Unable to load renderable",this)
                 }
                 null
-            })
+            }
         // When you build a Renderable, Sceneform loads its resources in the background while returning
         // a CompletableFuture. Call thenAccept(), handle(), or check isDone() before calling get().
-        ModelRenderable.builder()
-            .setSource(this, com.ar.sceneformdemo.R.raw.andy)
-            .build()
-            .thenAccept { renderable: ModelRenderable ->
-                andyRenderable = renderable
-            }
-            .exceptionally { throwable: Throwable? ->
-                val toast =
-                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
-                toast.setGravity(Gravity.CENTER, 0, 0)
-                toast.show()
-                null
-            }
-//        val anchor: Anchor?
-//        val anchorNode = AnchorNode()
-//        val anchorNode = AnchorNode(anchor)
-//        anchorNode.setParent(arFragment!!.arSceneView.scene)
-//        val sliderControls = TransformableNode(arFragment!!.transformationSystem)
-//        sliderControls.setParent(anchorNode)
-//        sliderControls.renderable = layout_2d
-//        sliderControls.localPosition = Vector3(0.0f, 0.25f, 0.0f)
+//        ModelRenderable.builder()
+//            .setSource(this, R.raw.andy)
+//            .build()
+//            .thenAccept { renderable: ModelRenderable ->
+//                andyRenderable = renderable
+//            }
+//            .exceptionally { throwable: Throwable? ->
+//                val toast =
+//                    Toast.makeText(this, "Unable to load andy renderable", Toast.LENGTH_LONG)
+//                toast.setGravity(Gravity.CENTER, 0, 0)
+//                toast.show()
+//                null
+//            }
         arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
-            if (andyRenderable == null) {
+            if (andyRenderable == null && earth == null) {
                 Log.d("devhell", "onCreate: $andyRenderable")
+                return@setOnTapArPlaneListener
+            }
+            if (!hasFinishedLoading) {
+                // We can't do anything yet.
                 return@setOnTapArPlaneListener
             }
             // Create the Anchor.
             val anchor: Anchor = hitResult.createAnchor()
             val anchorNode = AnchorNode(anchor)
             anchorNode.setParent(arFragment!!.arSceneView.scene)
+
+            //create slider control and add it to the anchor.
             val sliderControls = TransformableNode(arFragment!!.transformationSystem)
             sliderControls.setParent(anchorNode)
-            sliderControls.renderable = layout_2d
-            sliderControls.localPosition = Vector3(0.0f, 0.35f, 0.0f)
+            sliderControls.renderable = speedSlider
+            sliderControls.localPosition = Vector3(0.0f,.65f, 0.0f)
             sliderControls.select()
 
-//             Create the transformable andy and add it to the anchor.
-            val andy =
-                TransformableNode(arFragment!!.transformationSystem)
-            andy.setParent(anchorNode)
-            andy.renderable = earth
-            andy.select()
+             //Create the transformable modelrenderable of the earth and add it to the anchor.
+            val planetEarth = TransformableNode(arFragment!!.transformationSystem)
+            planetEarth.setParent(anchorNode)
+            planetEarth.renderable = earth
+            planetEarth.select()
 
-            // Toggle the solar controls on and off by tapping the sun.
-            andy.setOnTapListener { hitTestResult: HitTestResult?, motionEvent: MotionEvent? ->
+            // Toggle the speed controls on and off by tapping the earth.
+            planetEarth.setOnTapListener { _: HitTestResult?, motionEvent: MotionEvent? ->
                 sliderControls.isEnabled = (!sliderControls.isEnabled)
                 if (motionEvent != null) {
                     if(motionEvent.action == MotionEvent.ACTION_DOWN){
@@ -155,7 +141,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (orbitanimator != null) {
-                orbitanimator.target = andy
+                orbitanimator.target = planetEarth
                 orbitanimator.duration = getAnimationDuration()
                 orbitanimator.start()
             }
@@ -168,7 +154,7 @@ class MainActivity : AppCompatActivity() {
 //            orbit.setDegreesPerSecond(orbitDegreesPerSecond)
 //            orbit.setParent(andy)
 
-            val solarControlsView: View? = layout_2d?.view
+            val solarControlsView: View? = speedSlider?.view
 
             val rotationSpeedBar = solarControlsView?.findViewById<SeekBar>(R.id.rotationSpeedBar)
             if (rotationSpeedBar != null) {
