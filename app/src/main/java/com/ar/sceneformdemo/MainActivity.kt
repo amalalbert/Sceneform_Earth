@@ -4,13 +4,11 @@ import android.animation.ObjectAnimator
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.ui.AppBarConfiguration
 import com.ar.helpers.CameraPermissionHelper
@@ -99,6 +97,7 @@ class MainActivity : AppCompatActivity() {
 //                toast.show()
 //                null
 //            }
+
         arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
             if (andyRenderable == null && earth == null) {
                 Log.d("devhell", "onCreate: $andyRenderable")
@@ -188,6 +187,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
     }
+
+
+
+
     private fun createAnimator(): ObjectAnimator? {
         // Node's setLocalRotation method accepts Quaternions as parameters.
         // First, set up orientations that will animate a circle.

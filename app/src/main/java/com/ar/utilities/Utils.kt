@@ -5,7 +5,7 @@ import android.view.Gravity
 import android.widget.Toast
 
 object Utils {
-    fun printToast(input:String,context:Context){
+    fun printToast(input: String, context: Context) {
         val toast =
             Toast.makeText(context, input, Toast.LENGTH_LONG)
         toast.setGravity(Gravity.CENTER, 0, 0)
