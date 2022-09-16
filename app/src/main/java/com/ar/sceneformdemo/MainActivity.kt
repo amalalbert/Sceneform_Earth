@@ -105,7 +105,6 @@ class MainActivity : AppCompatActivity() {
 //                Log.d("devhell", "onCreate:${hasFinishedLoading} ")
 //            }
                 val session: Session? = arFragment!!.arSceneView.session
-            Log.d("devhell", "onCreate: ${arFragment!!.arSceneView.session}")
                 val position = floatArrayOf(0f, 0f, -(.75).toFloat())
                 val rotation = floatArrayOf(0f, 0f, 0f, 1f)
                 val pose = Pose(position, rotation)
@@ -115,7 +114,6 @@ class MainActivity : AppCompatActivity() {
                 anchornode.setParent(arFragment!!.arSceneView.scene)
 
 
-//            val planetEarth = TransformableNode(arFragment!!.transformationSystem)
             val planetEarth = TransformableNode(arFragment!!.transformationSystem)
             planetEarth.setParent(anchornode)
             planetEarth.renderable = earth
