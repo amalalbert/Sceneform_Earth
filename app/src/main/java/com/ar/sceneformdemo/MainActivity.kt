@@ -11,10 +11,10 @@ import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.ui.AppBarConfiguration
+import com.ar.sceneformdemo.BuildConfig
 import com.ar.helpers.CameraPermissionHelper
-import com.google.ar.core.Anchor
-import com.google.ar.core.HitResult
-import com.google.ar.core.Plane
+import com.ar.utilities.Utils
+import com.google.ar.core.*
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.HitTestResult
 import com.google.ar.sceneform.math.Quaternion
@@ -26,8 +26,7 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
-import com.ar.utilities.Utils
-import java.util.function.BiFunction
+import kotlin.math.log
 
 
 class MainActivity : AppCompatActivity() {
@@ -62,26 +61,28 @@ class MainActivity : AppCompatActivity() {
             ViewRenderable.builder().setView(this,R.layout.alert_layout).build()
         val earthStage: CompletableFuture<ModelRenderable> =
             ModelRenderable.builder().setSource(this, Uri.parse("Earth.sfb")).build()
-
-            CompletableFuture.allOf(controlsStage,earthStage).handle { notUsed: Void?, throwable: Throwable? ->
-                // When you build a Renderable, Sceneform loads its resources in the background while
-                // returning a CompletableFuture. Call handle(), thenAccept(), or check isDone()
-                // before calling get().
-                if (throwable != null) {
-                    Utils.printToast("Unable to load renderable",this)
+        fun loadAR() {
+            CompletableFuture.allOf(controlsStage, earthStage)
+                .handle { notUsed: Void?, throwable: Throwable? ->
+                    // When you build a Renderable, Sceneform loads its resources in the background while
+                    // returning a CompletableFuture. Call handle(), thenAccept(), or check isDone()
+                    // before calling get().
+                    if (throwable != null) {
+                        Utils.printToast("Unable to load renderable", this)
+                    }
+                    try {
+                        earth = earthStage.get()
+                        speedSlider = controlsStage.get()
+                        // Everything finished loading successfully.
+                        hasFinishedLoading = true
+                    } catch (ex: InterruptedException) {
+                        Utils.printToast("Unable to load renderable", this)
+                    } catch (ex: ExecutionException) {
+                        Utils.printToast("Unable to load renderable", this)
+                    }
+                    null
                 }
-                try {
-                    earth = earthStage.get()
-                    speedSlider = controlsStage.get()
-                    // Everything finished loading successfully.
-                    hasFinishedLoading = true
-                } catch (ex: InterruptedException) {
-                    Utils.printToast("Unable to load renderable",this)
-                } catch (ex: ExecutionException) {
-                    Utils.printToast("Unable to load renderable",this)
-                }
-                null
-            }
+        }
         // When you build a Renderable, Sceneform loads its resources in the background while returning
         // a CompletableFuture. Call thenAccept(), handle(), or check isDone() before calling get().
 //        ModelRenderable.builder()
@@ -97,53 +98,87 @@ class MainActivity : AppCompatActivity() {
 //                toast.show()
 //                null
 //            }
+        if(BuildConfig.FLAVOR =="selfPlacing") {
+//            runOnUiThread {
+            loadAR()
+//            while(!hasFinishedLoading){
+//                Log.d("devhell", "onCreate:${hasFinishedLoading} ")
+//            }
+                val session: Session? = arFragment!!.arSceneView.session
+                val position = floatArrayOf(0f, 0f, -(.75).toFloat())
+                val rotation = floatArrayOf(0f, 0f, 0f, 1f)
+                val pose = Pose(position, rotation)
+                val anchor: Anchor? = session?.createAnchor(pose)
+                val anchornode = AnchorNode(anchor)
+//            Log.d("devhell", "onCreate:${anchor} $pose $session ")
+                anchornode.setParent(arFragment!!.arSceneView.scene)
 
-        arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
-            if (andyRenderable == null && earth == null) {
-                Log.d("devhell", "onCreate: $andyRenderable")
-                return@setOnTapArPlaneListener
-            }
-            if (!hasFinishedLoading) {
-                // We can't do anything yet.
-                return@setOnTapArPlaneListener
-            }
-            // Create the Anchor.
-            val anchor: Anchor = hitResult.createAnchor()
-            val anchorNode = AnchorNode(anchor)
-            anchorNode.setParent(arFragment!!.arSceneView.scene)
 
-            //create slider control and add it to the anchor.
-            val sliderControls = TransformableNode(arFragment!!.transformationSystem)
-            sliderControls.setParent(anchorNode)
-            sliderControls.renderable = speedSlider
-            sliderControls.localPosition = Vector3(0.0f,.65f, 0.0f)
-            sliderControls.select()
-
-             //Create the transformable modelrenderable of the earth and add it to the anchor.
             val planetEarth = TransformableNode(arFragment!!.transformationSystem)
-            planetEarth.setParent(anchorNode)
+            planetEarth.setParent(anchornode)
             planetEarth.renderable = earth
+            planetEarth.localPosition = Vector3(0f,0f,0f)
             planetEarth.select()
 
-            // Toggle the speed controls on and off by tapping the earth.
-            planetEarth.setOnTapListener { _: HitTestResult?, motionEvent: MotionEvent? ->
-                sliderControls.isEnabled = (!sliderControls.isEnabled)
-                if (motionEvent != null) {
-                    if(motionEvent.action == MotionEvent.ACTION_DOWN){
-                        pressTime = System.currentTimeMillis();
-                        if(releaseTime != -1L) duration = pressTime - releaseTime;
-                    } else if(motionEvent.action == MotionEvent.ACTION_UP){
-                        releaseTime = System.currentTimeMillis();
-                        duration = System.currentTimeMillis() - pressTime;
+                if (orbitanimator != null) {
+                    orbitanimator.target = anchornode
+                    orbitanimator.duration = getAnimationDuration()
+                    orbitanimator.start()
+                }
+//            }
+
+        }
+        else if (BuildConfig.FLAVOR !="selfPlacing") {
+            loadAR()
+
+            Log.d("devhell", "onCreate1:${hasFinishedLoading} ")
+            arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
+                if (andyRenderable == null && earth == null) {
+                    Log.d("devhell", "onCreate: $andyRenderable")
+                    return@setOnTapArPlaneListener
+                }
+                if (!hasFinishedLoading) {
+                    // We can't do anything yet.
+                    Log.d("devhell", "onCreate1:${hasFinishedLoading} ")
+                    return@setOnTapArPlaneListener
+                }
+                // Create the Anchor.
+                val anchor: Anchor = hitResult.createAnchor()
+                val anchorNode = AnchorNode(anchor)
+                anchorNode.setParent(arFragment!!.arSceneView.scene)
+
+                //create slider control and add it to the anchor.
+                val sliderControls = TransformableNode(arFragment!!.transformationSystem)
+                sliderControls.setParent(anchorNode)
+                sliderControls.renderable = speedSlider
+                sliderControls.localPosition = Vector3(0.0f, .65f, 0.0f)
+                sliderControls.select()
+
+                //Create the transformable modelrenderable of the earth and add it to the anchor.
+                val planetEarth = TransformableNode(arFragment!!.transformationSystem)
+                planetEarth.setParent(anchorNode)
+                planetEarth.renderable = earth
+                planetEarth.select()
+
+                // Toggle the speed controls on and off by tapping the earth.
+                planetEarth.setOnTapListener { _: HitTestResult?, motionEvent: MotionEvent? ->
+                    sliderControls.isEnabled = (!sliderControls.isEnabled)
+                    if (motionEvent != null) {
+                        if (motionEvent.action == MotionEvent.ACTION_DOWN) {
+                            pressTime = System.currentTimeMillis();
+                            if (releaseTime != -1L) duration = pressTime - releaseTime;
+                        } else if (motionEvent.action == MotionEvent.ACTION_UP) {
+                            releaseTime = System.currentTimeMillis();
+                            duration = System.currentTimeMillis() - pressTime;
+                        }
                     }
                 }
-            }
 
-            if (orbitanimator != null) {
-                orbitanimator.target = planetEarth
-                orbitanimator.duration = getAnimationDuration()
-                orbitanimator.start()
-            }
+                if (orbitanimator != null) {
+                    orbitanimator.target = planetEarth
+                    orbitanimator.duration = getAnimationDuration()
+                    orbitanimator.start()
+                }
 
 //            val orbitDegreesPerSecond = 0f
 //            // Orbit is a rotating node with no renderable positioned at the sun.
@@ -153,28 +188,31 @@ class MainActivity : AppCompatActivity() {
 //            orbit.setDegreesPerSecond(orbitDegreesPerSecond)
 //            orbit.setParent(andy)
 
-            val solarControlsView: View? = speedSlider?.view
+                val solarControlsView: View? = speedSlider?.view
 
-            val rotationSpeedBar = solarControlsView?.findViewById<SeekBar>(R.id.rotationSpeedBar)
-            if (rotationSpeedBar != null) {
-                rotationSpeedBar.progress = (sliderSettings.getRotationSpeedMultiplier() * 10.0f).toInt()
+                val rotationSpeedBar =
+                    solarControlsView?.findViewById<SeekBar>(R.id.rotationSpeedBar)
+                if (rotationSpeedBar != null) {
+                    rotationSpeedBar.progress =
+                        (sliderSettings.getRotationSpeedMultiplier() * 10.0f).toInt()
+                }
+                rotationSpeedBar?.setOnSeekBarChangeListener(
+                    object : OnSeekBarChangeListener {
+                        override fun onProgressChanged(
+                            seekBar: SeekBar,
+                            progress: Int,
+                            fromUser: Boolean
+                        ) {
+                            val ratio = progress.toFloat() / rotationSpeedBar.max.toFloat()
+                            sliderSettings.setRotationSpeedMultiplier(ratio * 10.0f)
+                        }
+
+                        override fun onStartTrackingTouch(seekBar: SeekBar) {}
+                        override fun onStopTrackingTouch(seekBar: SeekBar) {
+                            orbitanimator?.duration = getAnimationDuration()
+                        }
+                    })
             }
-            rotationSpeedBar?.setOnSeekBarChangeListener(
-                object : OnSeekBarChangeListener {
-                    override fun onProgressChanged(
-                        seekBar: SeekBar,
-                        progress: Int,
-                        fromUser: Boolean
-                    ) {
-                        val ratio = progress.toFloat() / rotationSpeedBar.max.toFloat()
-                        sliderSettings.setRotationSpeedMultiplier(ratio * 10.0f)
-                    }
-
-                    override fun onStartTrackingTouch(seekBar: SeekBar) {}
-                    override fun onStopTrackingTouch(seekBar: SeekBar) {
-                        orbitanimator?.duration = getAnimationDuration()
-                    }
-                })
         }
     }
 
